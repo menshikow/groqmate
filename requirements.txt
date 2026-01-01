@@ -1,3 +1,0 @@
-textual-dev
-groq
-textual
