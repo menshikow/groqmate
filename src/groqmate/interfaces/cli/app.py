@@ -1,14 +1,16 @@
 import asyncio
 import argparse
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, Static
+from textual.widgets import Header, Static
 from textual.containers import Container
 from textual.binding import Binding
 
 from groqmate.core.tutor import Tutor
 from groqmate.core.state import Session
-from groqmate.core.providers import ProviderConfig, Provider
-from groqmate.interfaces.cli.widgets import ChatLog, InputBar
+from groqmate.core.providers import ProviderConfig, Provider, DEFAULTS
+from groqmate.core.config import Config
+from groqmate.interfaces.cli.widgets import ChatLog, InputBar, CustomFooter
+from groqmate.interfaces.cli.settings_screen import SettingsScreen
 
 
 class GroqmateApp(App):
@@ -18,23 +20,33 @@ class GroqmateApp(App):
         Binding("ctrl+q", "quit", "Quit", show=True),
         Binding("ctrl+c", "quit", "Quit", show=False),
         Binding("ctrl+l", "clear", "Clear", show=True),
+        Binding("ctrl+p", "settings", "Settings", show=True),
     ]
 
-    def __init__(self, provider: str = "groq", model: str | None = None):
+    def __init__(self, provider: str | None = None, model: str | None = None):
         super().__init__()
-        self.provider_config = ProviderConfig(provider=Provider(provider), model=model)
+        self.config = Config.load()
+
+        provider_str = provider or self.config.settings.provider
+        model_str = model or self.config.settings.model
+
+        self.provider_config = ProviderConfig(
+            provider=Provider(provider_str), model=model_str
+        )
         self.tutor: Tutor | None = None
         self.session = Session()
         self._is_processing = False
 
     def on_mount(self) -> None:
+        self._init_tutor()
+        self.query_one(InputBar).focus_input()
+
+    def _init_tutor(self) -> None:
         try:
-            self.tutor = Tutor(self.provider_config)
+            self.tutor = Tutor(self.provider_config, self.config)
             self._show_welcome()
         except ValueError as e:
             self._show_error(str(e))
-
-        self.query_one(InputBar).focus_input()
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
@@ -42,12 +54,12 @@ class GroqmateApp(App):
             ChatLog(),
         )
         yield InputBar()
-        yield Footer()
+        yield CustomFooter(provider=self.provider_config.provider.value)
 
     def _show_welcome(self) -> None:
         chat = self.query_one(ChatLog)
         provider_name = self.provider_config.provider.value.upper()
-        model_name = self.provider_config.model or self.provider_config.DEFAULTS.get(
+        model_name = self.provider_config.model or DEFAULTS.get(
             self.provider_config.provider, "default"
         )
         chat.add_message(
@@ -55,16 +67,16 @@ class GroqmateApp(App):
             f"Welcome to Groqmate! Your learning coach.\n"
             f"Provider: {provider_name} | Model: {model_name}\n"
             f"Type 'teach me <topic>' to start a lesson.\n"
-            f"Commands: next, wtf, summary, quit",
+            f"Commands: next, wtf, summary, quit\n"
+            f"Press Ctrl+P for settings.",
             is_system=True,
         )
 
     def _show_error(self, message: str) -> None:
         chat = self.query_one(ChatLog)
-        env_key = self.provider_config.get_env_key()
         chat.add_message(
             "System",
-            f"Error: {message}\nPlease set {env_key} environment variable.",
+            f"Error: {message}\nPress Ctrl+P to configure your API key.",
             is_system=True,
         )
 
@@ -74,6 +86,29 @@ class GroqmateApp(App):
             self.title = f"Groqmate [{progress}]"
         else:
             self.title = "Groqmate"
+
+    def action_settings(self) -> None:
+        self.push_screen(SettingsScreen(self.config))
+
+    def _on_settings_saved(self) -> None:
+        self.config = Config.load()
+
+        self.provider_config = ProviderConfig(
+            provider=Provider(self.config.settings.provider),
+            model=self.config.settings.model,
+        )
+
+        self._init_tutor()
+
+        footer = self.query_one(CustomFooter)
+        footer.update_provider(self.config.settings.provider)
+
+        chat = self.query_one(ChatLog)
+        chat.add_message(
+            "System",
+            f"Settings applied. Provider: {self.config.settings.provider.upper()}",
+            is_system=True,
+        )
 
     async def on_input_bar_submitted(self, message: InputBar.Submitted) -> None:
         if self._is_processing:
@@ -89,14 +124,11 @@ class GroqmateApp(App):
         await self._handle_input(user_input)
 
     async def _handle_input(self, user_input: str) -> None:
-        if not self.tutor:
-            return
-
         chat = self.query_one(ChatLog)
         lower_input = user_input.lower()
 
         if lower_input in ("quit", "exit", "q"):
-            self.exit()
+            self.app.exit()
             return
 
         if lower_input in ("clear", "cls"):
@@ -292,9 +324,6 @@ class GroqmateApp(App):
         try:
             summary = await self.tutor.generate_summary(self.session)
 
-            import os
-            from datetime import datetime
-
             topic_slug = self.session.state.plan.topic.lower().replace(" ", "_")
             filename = f"{topic_slug}_notes.md"
 
@@ -302,8 +331,7 @@ class GroqmateApp(App):
                 f.write(summary)
 
             chat.add_message("System", f"Summary saved to {filename}", is_system=True)
-
-            msg = chat.add_message("Groqmate", summary, is_user=False)
+            chat.add_message("Groqmate", summary, is_user=False)
 
         except Exception as e:
             chat.add_message("System", f"Error: {e}", is_system=True)
@@ -322,7 +350,7 @@ def run():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  groqmate                           # Use default (Groq)
+  groqmate                           # Use default from config or Groq
   groqmate -p gemini                 # Use Gemini
   groqmate -p openai -m gpt-4o-mini  # Use specific model
   groqmate -p ollama                 # Use local Ollama
@@ -343,11 +371,11 @@ Supported providers: groq, gemini, openai, deepseek, openrouter, ollama, anthrop
             "anthropic",
             "mistral",
         ],
-        default="groq",
-        help="LLM provider to use (default: groq)",
+        default=None,
+        help="LLM provider to use (overrides config)",
     )
     parser.add_argument(
-        "--model", "-m", help="Specific model to use (overrides provider default)"
+        "--model", "-m", help="Specific model to use (overrides config)"
     )
     parser.add_argument(
         "--list-providers",
@@ -361,10 +389,9 @@ Supported providers: groq, gemini, openai, deepseek, openrouter, ollama, anthrop
     if args.list_providers:
         print("Available providers and default models:\n")
         for provider in Provider:
-            default = ProviderConfig.DEFAULTS.get(provider, "N/A")
-            env_key = ProviderConfig.ENV_KEYS.get(provider, "No API key needed")
+            default = DEFAULTS.get(provider, "N/A")
             local = "(local)" if provider == Provider.OLLAMA else ""
-            print(f"  {provider.value:12} {default:30} [{env_key}] {local}")
+            print(f"  {provider.value:12} {default:30} {local}")
         print()
         return
 

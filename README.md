@@ -20,6 +20,7 @@ An interactive CLI learning coach powered by LLMs. Think of it as a gym coach fo
 - **Terminal-native:** ASCII graphs, Unicode math, no heavy browser UI
 - **Streaming:** Token-by-token responses for a real-time feel
 - **Multi-provider:** Works with Groq, Gemini, OpenAI, DeepSeek, Ollama, and more
+- **Built-in Settings:** Press `Ctrl+P` to configure providers and API keys
 
 ## Requirements
 
@@ -44,19 +45,41 @@ uv tool install .
 ## Quick Start
 
 ```bash
+# Run groqmate
+groqmate
+
+# On first run, press Ctrl+P to open settings
+# Add your API key there (or use environment variables)
+```
+
+## API Key Setup
+
+### Option 1: Built-in Settings (Recommended)
+
+```bash
+# 1. Run groqmate
+groqmate
+
+# 2. Press Ctrl+P to open settings
+# 3. Enter your API key for your preferred provider
+# 4. Click Save - changes apply immediately
+```
+
+Settings are saved to `~/.groqmate/config.toml`
+
+### Option 2: Environment Variables
+
+```bash
 # Set your API key (pick one provider)
 export GROQ_API_KEY=your_key_here      # Groq (free tier)
-# export GEMINI_API_KEY=your_key_here  # Gemini (free tier)
-
-# Run
-groqmate
+export GEMINI_API_KEY=your_key_here    # Gemini (free tier)
+export OPENAI_API_KEY=your_key_here    # OpenAI
+export DEEPSEEK_API_KEY=your_key_here  # DeepSeek (cheap)
 ```
 
 ## Free Provider Setup
 
-Groqmate works with multiple LLM providers. Here's how to set up free options:
-
-### Option 1: Groq (Recommended)
+### Groq (Recommended)
 
 **Free tier:** Yes, generous rate limits
 
@@ -64,64 +87,54 @@ Groqmate works with multiple LLM providers. Here's how to set up free options:
 # 1. Go to https://console.groq.com/
 # 2. Sign up / log in
 # 3. Create an API key
-# 4. Export it:
-export GROQ_API_KEY=gsk_xxx...
-
+# 4. Add it in settings (Ctrl+P) or: export GROQ_API_KEY=gsk_xxx...
 # 5. Run groqmate (uses Groq by default)
 groqmate
 ```
 
-### Option 2: Google Gemini
+### Google Gemini
 
 **Free tier:** Yes, via Google AI Studio
 
 ```bash
 # 1. Go to https://aistudio.google.com/
 # 2. Create an API key
-# 3. Export it:
-export GEMINI_API_KEY=AIza...
-
+# 3. Add it in settings (Ctrl+P) or: export GEMINI_API_KEY=AIza...
 # 4. Run with Gemini provider
 groqmate -p gemini
 ```
 
-### Option 3: DeepSeek
+### DeepSeek
 
 **Cost:** Very cheap (~$0.55 per 1M tokens)
 
 ```bash
 # 1. Go to https://platform.deepseek.com/
 # 2. Create an account and API key
-# 3. Export it:
-export DEEPSEEK_API_KEY=sk-...
-
+# 3. Add it in settings (Ctrl+P) or: export DEEPSEEK_API_KEY=sk-...
 # 4. Run with DeepSeek provider
 groqmate -p deepseek
 ```
 
-### Option 4: Ollama (Local, No API Key)
+### Ollama (Local, No API Key)
 
 **Cost:** Free, runs locally
 
 ```bash
 # 1. Install Ollama: https://ollama.ai/
-# 2. Pull a model:
-ollama pull llama3.2
-
+# 2. Pull a model: ollama pull llama3.2
 # 3. Run groqmate with Ollama (no API key needed)
 groqmate -p ollama
 ```
 
-### Option 5: OpenRouter
+### OpenRouter
 
 **Free tier:** 100 requests/day
 
 ```bash
 # 1. Go to https://openrouter.ai/
 # 2. Create an account and API key
-# 3. Export it:
-export OPENROUTER_API_KEY=sk-or-...
-
+# 3. Add it in settings (Ctrl+P) or: export OPENROUTER_API_KEY=sk-or-...
 # 4. Run with OpenRouter
 groqmate -p openrouter
 ```
@@ -160,6 +173,14 @@ Groqmate: [Step 2 of 5: The Base Case]
 | `help` | Show available commands |
 | `quit` | Exit the app |
 
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+P` | Open settings |
+| `Ctrl+L` | Clear chat |
+| `Ctrl+Q` | Quit |
+
 ### CLI Options
 
 ```bash
@@ -176,6 +197,23 @@ groqmate -p openai -m gpt-4o-mini
 # List all providers and their default models
 groqmate --list-providers
 ```
+
+## Configuration
+
+Settings are stored in `~/.groqmate/config.toml`:
+
+```toml
+[settings]
+provider = "groq"
+model = ""  # Empty = use default
+
+[api_keys]
+groq = "gsk_xxx..."
+gemini = "AIza_xxx..."
+# Add more as needed
+```
+
+You can edit this file directly or use `Ctrl+P` in the app.
 
 ## Development
 
@@ -195,10 +233,6 @@ uv run pytest --cov=src/groqmate --cov-report=term-missing
 
 # Run the app locally
 uv run groqmate
-
-# Format/lint (if configured)
-uv run ruff check .
-uv run ruff format .
 ```
 
 ## Project Structure
@@ -207,41 +241,35 @@ uv run ruff format .
 groqmate/
 ├── src/groqmate/
 │   ├── core/
-│   │   ├── models.py       # Pydantic data models
-│   │   ├── state.py        # Session state machine
-│   │   ├── providers.py    # Multi-provider config
-│   │   └── tutor.py        # LLM integration (LiteLLM)
+│   │   ├── models.py         # Pydantic data models
+│   │   ├── state.py          # Session state machine
+│   │   ├── providers.py      # Multi-provider config
+│   │   ├── config.py         # Settings & API key storage
+│   │   └── tutor.py          # LLM integration (LiteLLM)
 │   └── interfaces/
 │       └── cli/
-│           ├── app.py      # Main Textual app
-│           ├── widgets.py  # UI components
-│           └── style.tcss  # Dark theme
+│           ├── app.py             # Main Textual app
+│           ├── widgets.py         # UI components
+│           ├── settings_screen.py # Settings modal
+│           └── style.tcss         # Dark theme
 ├── tests/
-│   ├── conftest.py         # Test fixtures
-│   ├── test_models.py
-│   ├── test_state.py
-│   ├── test_providers.py
-│   ├── test_tutor.py
-│   ├── test_widgets.py
-│   └── test_app.py
 ├── pyproject.toml
 ├── uv.lock
-├── .python-version
 └── README.md
 ```
 
 ## Supported Providers
 
-| Provider | Env Variable | Free Tier | Notes |
-|----------|-------------|-----------|-------|
-| Groq | `GROQ_API_KEY` | ✅ Yes | Fast inference, recommended |
-| Gemini | `GEMINI_API_KEY` | ✅ Yes | Via Google AI Studio |
-| DeepSeek | `DEEPSEEK_API_KEY` | Cheap | ~$0.55/1M tokens |
-| OpenRouter | `OPENROUTER_API_KEY` | 100/day | Routes to many models |
-| Ollama | None needed | ✅ Free | Runs locally |
-| OpenAI | `OPENAI_API_KEY` | No | GPT models |
-| Anthropic | `ANTHROPIC_API_KEY` | No | Claude models |
-| Mistral | `MISTRAL_API_KEY` | No | Mistral models |
+| Provider | Config Key | Free Tier | Notes |
+|----------|------------|-----------|-------|
+| Groq | `groq` | ✅ Yes | Fast inference, recommended |
+| Gemini | `gemini` | ✅ Yes | Via Google AI Studio |
+| DeepSeek | `deepseek` | Cheap | ~$0.55/1M tokens |
+| OpenRouter | `openrouter` | 100/day | Routes to many models |
+| Ollama | `ollama` | ✅ Free | Runs locally, no API key |
+| OpenAI | `openai` | No | GPT models |
+| Anthropic | `anthropic` | No | Claude models |
+| Mistral | `mistral` | No | Mistral models |
 
 ## License
 

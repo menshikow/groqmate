@@ -10,30 +10,31 @@ from groqmate.core.tutor import (
     SUMMARY_PROMPT,
 )
 from groqmate.core.providers import ProviderConfig, Provider
+from groqmate.core.config import Config
 
 
 class TestTutorInit:
     def test_init_with_config(self, provider_config_groq, monkeypatch):
         monkeypatch.setenv("GROQ_API_KEY", "test_key")
         tutor = Tutor(provider_config_groq)
-        assert tutor.config == provider_config_groq
+        assert tutor.provider_config == provider_config_groq
         assert tutor.model == "groq/llama-3.3-70b-versatile"
 
     def test_init_without_config_uses_default(self, monkeypatch):
         monkeypatch.setenv("GROQ_API_KEY", "test_key")
         tutor = Tutor()
-        assert tutor.config.provider == Provider.GROQ
+        assert tutor.provider_config.provider == Provider.GROQ
 
     def test_init_raises_without_api_key(self, monkeypatch):
         monkeypatch.delenv("GROQ_API_KEY", raising=False)
-        with pytest.raises(ValueError, match="GROQ_API_KEY"):
+        with pytest.raises(ValueError, match="No API key"):
             Tutor(ProviderConfig(provider=Provider.GROQ))
 
     def test_init_ollama_no_key_needed(self, monkeypatch):
         monkeypatch.delenv("GROQ_API_KEY", raising=False)
-        config = ProviderConfig(provider=Provider.OLLAMA)
-        tutor = Tutor(config)
-        assert tutor.config.is_local()
+        provider_config = ProviderConfig(provider=Provider.OLLAMA)
+        tutor = Tutor(provider_config)
+        assert tutor.provider_config.is_local()
 
     def test_model_string_set_correctly(self, provider_config_gemini, monkeypatch):
         monkeypatch.setenv("GEMINI_API_KEY", "test_key")

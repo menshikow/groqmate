@@ -1,13 +1,13 @@
-$bg-dark: #0d0d0d;
-$bg-panel: #1a1a1a;
-$bg-surface: #242424;
+$bg-dark: #000000;
+$bg-panel: #0a0a0a;
+$bg-surface: #0f0f0f;
 $text: #e0e0e0;
 $text-muted: #666666;
 $success: #00ff88;
 $warning: #ffcc00;
 $error: #ff4444;
 $accent: #ff6b35;
-$border: #333333;
+$border: #1a1a1a;
 
 Screen {
     background: $bg-dark;
@@ -24,12 +24,6 @@ Header {
 Header .header--title {
     text-style: bold;
     color: $accent;
-}
-
-Footer {
-    background: $bg-panel;
-    color: $text-muted;
-    border-top: solid $border;
 }
 
 Container {
@@ -111,4 +105,13 @@ Button:hover {
 Button:focus {
     background: $success;
     text-style: bold;
+}
+
+Button.-default {
+    background: $bg-surface;
+    color: $text;
+}
+
+Button.-default:hover {
+    background: $border;
 }

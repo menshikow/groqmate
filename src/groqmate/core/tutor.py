@@ -1,10 +1,12 @@
 from litellm import acompletion
-from groqmate.core.models import LessonPlan, LessonStep
+from groqmate.core.models import LessonPlan
 from groqmate.core.state import Session
 from groqmate.core.providers import ProviderConfig, Provider
+from groqmate.core.config import Config
 from typing import AsyncIterator, Optional
 import json
 import os
+
 
 SYSTEM_PROMPT = """You are Groqmate, a terse and encouraging learning coach.
 You teach through atomic chunks, not lectures.
@@ -77,15 +79,45 @@ Format as clean markdown with:
 - Keep it scannable and useful for review"""
 
 
-class Tutor:
-    def __init__(self, config: Optional[ProviderConfig] = None):
-        self.config = config or ProviderConfig()
-        self.model = self.config.get_model_string()
+ENV_KEY_MAPPING = {
+    "groq": "GROQ_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "mistral": "MISTRAL_API_KEY",
+}
 
-        if not self.config.is_local():
-            env_key = self.config.get_env_key()
-            if env_key and not os.getenv(env_key):
-                raise ValueError(f"{env_key} environment variable not set")
+
+class Tutor:
+    def __init__(
+        self,
+        provider_config: Optional[ProviderConfig] = None,
+        config: Optional[Config] = None,
+    ):
+        self.provider_config = provider_config or ProviderConfig()
+        self.config = config or Config.load()
+        self.model = self.provider_config.get_model_string()
+
+        if not self.provider_config.is_local():
+            self._setup_api_key()
+
+    def _setup_api_key(self) -> None:
+        provider = self.provider_config.provider.value
+        api_key = self.config.get_api_key(provider)
+
+        if not api_key:
+            provider_upper = provider.upper()
+            raise ValueError(
+                f"No API key for {provider_upper}. "
+                f"Press Ctrl+P to open settings and add your API key, "
+                f"or set the {ENV_KEY_MAPPING.get(provider, 'API_KEY')} environment variable."
+            )
+
+        env_var = ENV_KEY_MAPPING.get(provider)
+        if env_var:
+            os.environ[env_var] = api_key
 
     async def generate_plan(self, topic: str) -> LessonPlan:
         response = await acompletion(
