@@ -73,25 +73,6 @@ Groqmate: [Step 2 of 5: The Base Case]
 | `help` | Show available commands |
 | `quit` | Exit the app |
 
-## Project Structure
-
-```
-groqmate/
-├── src/groqmate/
-│   ├── core/
-│   │   ├── models.py      # Pydantic data models
-│   │   ├── state.py       # Session state machine
-│   │   └── tutor.py       # Groq API integration
-│   └── interfaces/
-│       └── cli/
-│           ├── app.py     # Main Textual app
-│           ├── widgets.py # UI components
-│           └── style.tcss # Dark theme styling
-├── tests/
-├── pyproject.toml
-└── README.md
-```
-
 ## License
 
 MIT
