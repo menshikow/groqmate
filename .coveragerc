@@ -1,0 +1,27 @@
+[run]
+source = src/groqmate
+omit = 
+    */tests/*
+    */__init__.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    @abstractmethod
+    if __name__ == .__main__.:
+    def on_mount
+    def compose
+    def on_input_bar_submitted
+    async def _handle_input
+    async def _start_lesson
+    async def _explain_current_step
+    async def _handle_quiz_answer
+    async def _handle_next
+    async def _handle_wtf
+    async def _handle_summary
+    def _show_welcome
+    def _show_error
+    def _show_help
+    self.query_one

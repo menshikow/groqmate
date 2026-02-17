@@ -1,6 +1,7 @@
-from groq import AsyncGroq
+from litellm import acompletion
 from groqmate.core.models import LessonPlan, LessonStep
 from groqmate.core.state import Session
+from groqmate.core.providers import ProviderConfig, Provider
 from typing import AsyncIterator, Optional
 import json
 import os
@@ -77,22 +78,24 @@ Format as clean markdown with:
 
 
 class Tutor:
-    def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable not set")
-        self.client = AsyncGroq(api_key=api_key)
-        self.model = "llama-3.3-70b-versatile"
+    def __init__(self, config: Optional[ProviderConfig] = None):
+        self.config = config or ProviderConfig()
+        self.model = self.config.get_model_string()
+
+        if not self.config.is_local():
+            env_key = self.config.get_env_key()
+            if env_key and not os.getenv(env_key):
+                raise ValueError(f"{env_key} environment variable not set")
 
     async def generate_plan(self, topic: str) -> LessonPlan:
-        response = await self.client.chat.completions.create(
+        response = await acompletion(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": PLAN_PROMPT.format(topic=topic)}
+                {"role": "user", "content": PLAN_PROMPT.format(topic=topic)},
             ],
             response_format={"type": "json_object"},
-            temperature=0.7
+            temperature=0.7,
         )
         content = response.choices[0].message.content
         if not content:
@@ -109,30 +112,32 @@ class Tutor:
         if not session.state.plan:
             yield "No lesson plan loaded."
             return
-        
+
         prompt = EXPLAIN_PROMPT.format(
             topic=session.state.plan.topic,
             step_num=step.index + 1,
             step_title=step.title,
             concept=step.concept,
-            quiz_question=step.quiz_question
+            quiz_question=step.quiz_question,
         )
 
-        stream = await self.client.chat.completions.create(
+        response = await acompletion(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
             stream=True,
-            temperature=0.7
+            temperature=0.7,
         )
 
-        async for chunk in stream:
-            if chunk.choices[0].delta.content:
+        async for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
-    async def check_answer(self, user_answer: str, session: Session) -> tuple[bool, str]:
+    async def check_answer(
+        self, user_answer: str, session: Session
+    ) -> tuple[bool, str]:
         step = session.current_step()
         if not step:
             return False, "No active lesson."
@@ -158,47 +163,45 @@ class Tutor:
         if not session.state.plan:
             yield "No lesson plan loaded."
             return
-        
+
         prompt = REPHRASE_PROMPT.format(
-            topic=session.state.plan.topic,
-            concept=step.concept
+            topic=session.state.plan.topic, concept=step.concept
         )
 
-        stream = await self.client.chat.completions.create(
+        response = await acompletion(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
             stream=True,
-            temperature=0.9
+            temperature=0.9,
         )
 
-        async for chunk in stream:
-            if chunk.choices[0].delta.content:
+        async for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
     async def generate_summary(self, session: Session) -> str:
         if not session.state.plan:
             return "No lesson to summarize."
 
-        steps_text = "\n".join([
-            f"{i+1}. {s.title}: {s.concept}"
-            for i, s in enumerate(session.state.plan.steps)
-        ])
-
-        prompt = SUMMARY_PROMPT.format(
-            topic=session.state.plan.topic,
-            steps=steps_text
+        steps_text = "\n".join(
+            [
+                f"{i + 1}. {s.title}: {s.concept}"
+                for i, s in enumerate(session.state.plan.steps)
+            ]
         )
 
-        response = await self.client.chat.completions.create(
+        prompt = SUMMARY_PROMPT.format(topic=session.state.plan.topic, steps=steps_text)
+
+        response = await acompletion(
             model=self.model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
-            temperature=0.5
+            temperature=0.5,
         )
 
         return response.choices[0].message.content or "# Error generating summary"
