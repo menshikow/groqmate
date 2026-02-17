@@ -4,7 +4,6 @@ __pycache__/
 *.pyd
 
 venv/
-env/
 .env
 
 .vscode/
@@ -15,3 +14,13 @@ Thumbs.db
 TODO.md
 brainstorming.md
 IMPLEMENTATION.md
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

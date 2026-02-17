@@ -3,7 +3,7 @@ name = "groqmate"
 version = "0.1.0"
 description = "An interactive CLI learning coach powered by LLMs"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "Groqmate"}
@@ -28,11 +28,11 @@ dev = [
 groqmate = "groqmate.interfaces.cli.app:run"
 
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/groqmate"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
