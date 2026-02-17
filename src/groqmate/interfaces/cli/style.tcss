@@ -1,0 +1,114 @@
+$bg-dark: #0d0d0d;
+$bg-panel: #1a1a1a;
+$bg-surface: #242424;
+$text: #e0e0e0;
+$text-muted: #666666;
+$success: #00ff88;
+$warning: #ffcc00;
+$error: #ff4444;
+$accent: #ff6b35;
+$border: #333333;
+
+Screen {
+    background: $bg-dark;
+    color: $text;
+}
+
+Header {
+    background: $bg-panel;
+    color: $text;
+    padding: 0 2;
+    border-bottom: solid $border;
+}
+
+Header .header--title {
+    text-style: bold;
+    color: $accent;
+}
+
+Footer {
+    background: $bg-panel;
+    color: $text-muted;
+    border-top: solid $border;
+}
+
+Container {
+    background: $bg-dark;
+}
+
+ChatLog {
+    background: $bg-dark;
+    scrollbar-size: 1 1;
+    scrollbar-background: $bg-dark;
+    scrollbar-color: $border;
+}
+
+ChatMessage {
+    margin: 0 1;
+    padding: 0 1;
+    height: auto;
+}
+
+ChatMessage.user {
+    color: $text;
+}
+
+ChatMessage.groqmate {
+    color: $success;
+}
+
+ChatMessage.system {
+    color: $warning;
+    text-style: italic;
+}
+
+InputBar {
+    dock: bottom;
+    height: auto;
+    padding: 1 2;
+    background: $bg-panel;
+    border-top: solid $border;
+}
+
+InputBar Input {
+    width: 1fr;
+    background: $bg-surface;
+    border: none;
+    color: $text;
+    padding: 1;
+}
+
+InputBar Input:focus {
+    border: none;
+    background: $bg-surface;
+}
+
+InputBar Input.-invalid {
+    border: none;
+}
+
+InputBar Input .input--placeholder {
+    color: $text-muted;
+}
+
+InputBar Input .input--cursor {
+    background: $accent;
+    color: $bg-dark;
+}
+
+Button {
+    background: $accent;
+    color: $bg-dark;
+    border: none;
+    padding: 0 2;
+    min-width: 8;
+}
+
+Button:hover {
+    background: $success;
+}
+
+Button:focus {
+    background: $success;
+    text-style: bold;
+}

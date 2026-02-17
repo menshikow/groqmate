@@ -1,3 +1,19 @@
+Metadata-Version: 2.4
+Name: groqmate
+Version: 0.1.0
+Summary: An interactive CLI learning coach powered by Groq
+Author: Groqmate
+License: MIT
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: groq>=0.4.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: textual>=0.70.0
+Requires-Dist: rich>=13.0.0
+Dynamic: license-file
+
 # Groqmate
 
 An interactive CLI learning coach powered by Groq. Think of it as a gym coach for your brain — it spots you, challenges you, and waits for you to lift the weight.

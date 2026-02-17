@@ -1,0 +1,2 @@
+[console_scripts]
+groqmate = groqmate.interfaces.cli.app:run
