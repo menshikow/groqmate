@@ -184,17 +184,20 @@ Groqmate: [Step 2 of 5: The Base Case]
 ### CLI Options
 
 ```bash
-# Use a specific provider
-groqmate -p gemini
-groqmate -p openai
-groqmate -p deepseek
-groqmate -p ollama
+# Quick provider switch
+groqmate gemini             # Use Gemini
+groqmate ollama             # Use local Ollama
+groqmate deepseek           # Use DeepSeek
 
-# Use a specific model
-groqmate -p groq -m llama-3.1-8b-instant
+# Provider with model
+groqmate groq/llama-3.1-8b-instant
+groqmate openai/gpt-4o-mini
+
+# Using flags (alternative)
+groqmate -p gemini
 groqmate -p openai -m gpt-4o-mini
 
-# List all providers and their default models
+# List all providers
 groqmate --list-providers
 ```
 

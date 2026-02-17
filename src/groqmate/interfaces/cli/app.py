@@ -1,5 +1,7 @@
 import asyncio
 import argparse
+import sys
+from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Static
 from textual.containers import Container
@@ -12,9 +14,42 @@ from groqmate.core.config import Config
 from groqmate.interfaces.cli.widgets import ChatLog, InputBar, CustomFooter
 from groqmate.interfaces.cli.settings_screen import SettingsScreen
 
+CSS_PATH = Path(__file__).parent / "style.tcss"
+
+VALID_PROVIDERS = [
+    "groq",
+    "gemini",
+    "openai",
+    "deepseek",
+    "openrouter",
+    "ollama",
+    "anthropic",
+    "mistral",
+]
+
+
+def show_providers_and_exit():
+    print("Available providers:\n")
+    for provider in Provider:
+        default = DEFAULTS.get(provider, "N/A")
+        local = "(local, no API key needed)" if provider == Provider.OLLAMA else ""
+        print(f"  {provider.value:12} {default:30} {local}")
+    print("\nUsage:")
+    print("  groqmate                 # Use default provider")
+    print("  groqmate gemini          # Use Gemini")
+    print("  groqmate groq/llama-3.1  # Use specific model")
+    sys.exit(1)
+
+
+def parse_provider_arg(arg: str) -> tuple[str, str | None]:
+    if "/" in arg:
+        provider, model = arg.split("/", 1)
+        return provider.lower(), model
+    return arg.lower(), None
+
 
 class GroqmateApp(App):
-    CSS_PATH = "style.tcss"
+    CSS_PATH = CSS_PATH
     TITLE = "Groqmate"
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit", show=True),
@@ -350,32 +385,28 @@ def run():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  groqmate                           # Use default from config or Groq
-  groqmate -p gemini                 # Use Gemini
-  groqmate -p openai -m gpt-4o-mini  # Use specific model
-  groqmate -p ollama                 # Use local Ollama
+  groqmate                    # Use default provider
+  groqmate gemini             # Quick switch to Gemini
+  groqmate groq/llama-3.1     # Use specific model
+  groqmate ollama             # Use local Ollama
 
 Supported providers: groq, gemini, openai, deepseek, openrouter, ollama, anthropic, mistral
         """,
     )
     parser.add_argument(
-        "--provider",
-        "-p",
-        choices=[
-            "groq",
-            "gemini",
-            "openai",
-            "deepseek",
-            "openrouter",
-            "ollama",
-            "anthropic",
-            "mistral",
-        ],
-        default=None,
-        help="LLM provider to use (overrides config)",
+        "provider",
+        nargs="?",
+        help="Provider or provider/model (e.g., 'gemini' or 'groq/llama-3.1')",
     )
     parser.add_argument(
-        "--model", "-m", help="Specific model to use (overrides config)"
+        "--provider",
+        "-p",
+        dest="provider_flag",
+        choices=VALID_PROVIDERS,
+        help="LLM provider to use (overrides positional arg)",
+    )
+    parser.add_argument(
+        "--model", "-m", help="Specific model to use (overrides provider default)"
     )
     parser.add_argument(
         "--list-providers",
@@ -387,15 +418,22 @@ Supported providers: groq, gemini, openai, deepseek, openrouter, ollama, anthrop
     args = parser.parse_args()
 
     if args.list_providers:
-        print("Available providers and default models:\n")
-        for provider in Provider:
-            default = DEFAULTS.get(provider, "N/A")
-            local = "(local)" if provider == Provider.OLLAMA else ""
-            print(f"  {provider.value:12} {default:30} {local}")
-        print()
-        return
+        show_providers_and_exit()
 
-    app = GroqmateApp(provider=args.provider, model=args.model)
+    provider = None
+    model = args.model
+
+    if args.provider_flag:
+        provider = args.provider_flag
+    elif args.provider:
+        provider, model_from_arg = parse_provider_arg(args.provider)
+        if provider not in VALID_PROVIDERS:
+            print(f"Error: '{provider}' is not a valid provider.\n")
+            show_providers_and_exit()
+        if model_from_arg and not args.model:
+            model = model_from_arg
+
+    app = GroqmateApp(provider=provider, model=model)
     app.run()
 
 
